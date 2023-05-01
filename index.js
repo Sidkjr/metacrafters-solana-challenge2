@@ -12,37 +12,34 @@ const {
 } = require("@solana/web3.js");
 
 
-// Making a keypair and getting the private key
-const newPair = Keypair.generate();
-console.log(newPair);
-
-// paste your secret that is logged here
+// Secret Key for FROM Wallet Stored Here
 const DEMO_FROM_SECRET_KEY = new Uint8Array(
   // paste your secret key array here
-    [
-        160,  20, 189, 212, 129, 188, 171, 124,  20, 179,  80,
-         27, 166,  17, 179, 198, 234,  36, 113,  87,   0,  46,
-        186, 250, 152, 137, 244,  15,  86, 127,  77,  97, 170,
-         44,  57, 126, 115, 253,  11,  60,  90,  36, 135, 177,
-        185, 231,  46, 155,  62, 164, 128, 225, 101,  79,  69,
-        101, 154,  24,  58, 214, 219, 238, 149,  86
-      ]            
+  []            
+);
+
+// Secret Key for TO Wallet Stored Here
+const DEMO_TO_SECRET_KEY = new Uint8Array(
+    []
 );
 
 const transferSol = async() => {
-    const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+    const connection = new Connection(clusterApiUrl("testnet"), "confirmed");
 
-    // Get Keypair from Secret Key
+    // TWO MAIN WALLETS
     var from = Keypair.fromSecretKey(DEMO_FROM_SECRET_KEY);
+    var to = Keypair.fromSecretKey(DEMO_TO_SECRET_KEY);
 
-    // Other things to try: 
-    // 1) Form array from userSecretKey
-    // const from = Keypair.fromSecretKey(Uint8Array.from(userSecretKey));
-    // 2) Make a new Keypair (starts with 0 SOL)
-    // const from = Keypair.generate();
+    // Get Senders Balance in LAMPORTS
+    var senderswalletBalance = await connection.getBalance(
+        new PublicKey(from.publicKey)
+    );
 
-    // Generate another Keypair (account we'll be sending to)
-    const to = Keypair.generate();
+    // Convert Senders Balance to SOL
+    var senderswalletsol = parseInt(senderswalletBalance) / LAMPORTS_PER_SOL;
+
+    // Print Senders Balance in SOL
+    console.log(`Senders Wallet Balance is: ${senderswalletsol} SOL`);
 
     // Aidrop 2 SOL to Sender wallet
     console.log("Airdopping some SOL to Sender wallet!");
@@ -50,6 +47,29 @@ const transferSol = async() => {
         new PublicKey(from.publicKey),
         2 * LAMPORTS_PER_SOL
     );
+
+    // Refresh Senders Balance in LAMPORTS
+    senderswalletBalance = await connection.getBalance(
+            new PublicKey(from.publicKey)
+        );
+
+    //Refresh Senders Balance in SOL
+    senderswalletsol = parseInt(senderswalletBalance) / LAMPORTS_PER_SOL;
+
+    // Extracting 50% of SOL of total balance and storing it in a variable
+    const senderswallethalved = senderswalletsol * 0.5;
+    console.log("Airdrop completed for the Sender account.");
+    
+    // Printing out Sender's Balance in SOL
+    console.log(`Senders Wallet Balance After AirDrop is: ${senderswalletsol} SOL`);
+
+    // Getting Reciever's Wallet Balance in LAMPORTS
+    var recieverswalletBalance = await connection.getBalance(
+        new PublicKey(to.publicKey)
+    );
+
+    // Printing out Reciever's Wallet Balance in SOL
+    console.log(`Recievers Wallet Balance is: ${parseInt(recieverswalletBalance) / LAMPORTS_PER_SOL} SOL`);
 
     // Latest blockhash (unique identifer of the block) of the cluster
     let latestBlockHash = await connection.getLatestBlockhash();
@@ -62,14 +82,14 @@ const transferSol = async() => {
         signature: fromAirDropSignature
     });
 
-    console.log("Airdrop completed for the Sender account");
 
     // Send money from "from" wallet and into "to" wallet
+    console.log("Sending 50% of SOL from FROM Wallet to TO Wallet...")
     var transaction = new Transaction().add(
         SystemProgram.transfer({
             fromPubkey: from.publicKey,
             toPubkey: to.publicKey,
-            lamports: LAMPORTS_PER_SOL / 100
+            lamports: LAMPORTS_PER_SOL * senderswallethalved
         })
     );
 
@@ -80,6 +100,20 @@ const transferSol = async() => {
         [from]
     );
     console.log('Signature is', signature);
+
+    // Refreshing and Printing out Sender's Balance
+    senderswalletBalance = await connection.getBalance(
+        new PublicKey(from.publicKey)
+    );
+    senderswalletsol = parseInt(senderswalletBalance) / LAMPORTS_PER_SOL;
+    console.log(`Senders Wallet Balance After Transaction is: ${senderswalletsol} SOL`)
+
+    // Refreshed Reciever's Balance
+    recieverswalletBalance = await connection.getBalance(
+        new PublicKey(to.publicKey)
+    );
+    console.log(`Recievers Wallet Balance After TRansaction is: ${parseInt(recieverswalletBalance) / LAMPORTS_PER_SOL} SOL`);
+
 }
 
 transferSol();
